@@ -1,0 +1,8 @@
+device: /dev/video0
+width: 640
+height: 480
+fps: 10
+queue_depth: 4
+simulate: true
+rtsp_url: rtsp://127.0.0.1:8554/imx6ull
+
