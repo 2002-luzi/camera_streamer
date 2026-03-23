@@ -5,6 +5,7 @@ project(camera_streamer LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(CAMERA_STREAMER_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 
@@ -35,4 +36,3 @@ endif()
 
 find_package(Threads REQUIRED)
 target_link_libraries(camera_streamer PRIVATE Threads::Threads)
-
