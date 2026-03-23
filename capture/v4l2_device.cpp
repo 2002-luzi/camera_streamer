@@ -139,6 +139,122 @@ bool V4L2Device::GetCaptureFormat(CaptureFormat& format) const {
     return true;
 }
 
+bool V4L2Device::SetFrameRate(std::uint32_t fps, CaptureFrameRate& applied_rate) const {
+    if (!IsOpen() || fps == 0) {
+        return false;
+    }
+
+    // VIDIOC_S_PARM 主要用于 streaming 参数协商。
+    // 对于 capture 设备，我们最常用的是设置 timeperframe：
+    //   timeperframe = 1 / fps
+    // 驱动可能接受、调整、或者忽略请求，因此调用后要回读结果。
+    v4l2_streamparm streamparm{};
+    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    streamparm.parm.capture.timeperframe.numerator = 1;
+    streamparm.parm.capture.timeperframe.denominator = fps;
+
+    if (Xioctl(VIDIOC_S_PARM, &streamparm) != 0) {
+        std::ostringstream oss;
+        oss << "VIDIOC_S_PARM failed for " << device_path_ << ": " << std::strerror(errno);
+        Log(LogLevel::kError, oss.str());
+        return false;
+    }
+
+    applied_rate.numerator = streamparm.parm.capture.timeperframe.numerator;
+    applied_rate.denominator = streamparm.parm.capture.timeperframe.denominator;
+    return true;
+}
+
+bool V4L2Device::RequestMmapBuffers(std::uint32_t requested_count,
+                                    std::vector<MmapBufferInfo>& buffers) const {
+    if (!IsOpen()) {
+        return false;
+    }
+
+    buffers.clear();
+
+    // REQBUFS 是 V4L2 mmap 采集的第一步。
+    // 用户态在这里告诉驱动：
+    // 1. 我想做 VIDEO_CAPTURE；
+    // 2. 我打算用 MMAP 方式访问 buffer；
+    // 3. 请先帮我准备 requested_count 个 buffer。
+    // 真正的 buffer 个数由驱动决定，因此返回后的 request.count 才是“实际值”。
+    v4l2_requestbuffers request{};
+    request.count = requested_count;
+    request.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    request.memory = V4L2_MEMORY_MMAP;
+
+    if (Xioctl(VIDIOC_REQBUFS, &request) != 0) {
+        std::ostringstream oss;
+        oss << "VIDIOC_REQBUFS failed for " << device_path_ << ": " << std::strerror(errno);
+        Log(LogLevel::kError, oss.str());
+        return false;
+    }
+
+    // 驱动可以拒绝、减少、或者按请求值分配。
+    // 如果 count 变成 0，通常表示当前配置下无法提供 mmap buffer。
+    if (request.count == 0) {
+        Log(LogLevel::kError, "Driver returned zero mmap buffers after VIDIOC_REQBUFS");
+        return false;
+    }
+
+    buffers.reserve(request.count);
+
+    for (std::uint32_t index = 0; index < request.count; ++index) {
+        // QUERYBUF 的职责是：查询某个具体 buffer 的元信息。
+        // 在 MMAP 模式下，我们最关心两类数据：
+        // 1. length: 这个 buffer 有多大；
+        // 2. m.offset: 后续调用 mmap() 时传给内核的偏移量。
+        v4l2_buffer buffer{};
+        buffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buffer.memory = V4L2_MEMORY_MMAP;
+        buffer.index = index;
+
+        if (Xioctl(VIDIOC_QUERYBUF, &buffer) != 0) {
+            std::ostringstream oss;
+            oss << "VIDIOC_QUERYBUF failed for index " << index << " on "
+                << device_path_ << ": " << std::strerror(errno);
+            Log(LogLevel::kError, oss.str());
+            return false;
+        }
+
+        MmapBufferInfo info;
+        info.index = buffer.index;
+        info.length = buffer.length;
+        info.bytes_used = buffer.bytesused;
+        info.offset = buffer.m.offset;
+        buffers.push_back(info);
+    }
+
+    return true;
+}
+
+bool V4L2Device::ReleaseMmapBuffers() const {
+    if (!IsOpen()) {
+        return false;
+    }
+
+    // 对于 MMAP 模式，REQBUFS(count=0) 是释放驱动端 buffer 池的标准做法。
+    // 正常顺序一般是：
+    // 1. STREAMOFF
+    // 2. munmap 用户态映射
+    // 3. REQBUFS(count=0) 释放驱动 buffer
+    v4l2_requestbuffers request{};
+    request.count = 0;
+    request.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    request.memory = V4L2_MEMORY_MMAP;
+
+    if (Xioctl(VIDIOC_REQBUFS, &request) != 0) {
+        std::ostringstream oss;
+        oss << "VIDIOC_REQBUFS(count=0) failed for " << device_path_ << ": "
+            << std::strerror(errno);
+        Log(LogLevel::kError, oss.str());
+        return false;
+    }
+
+    return true;
+}
+
 void V4L2Device::DumpInfo(std::ostream& os) const {
     v4l2_capability capability{};
     if (!QueryCapabilities(capability)) {

@@ -1,8 +1,10 @@
-device: /dev/video0
+device: /dev/video1
 width: 640
 height: 480
+pixel_format: YUYV
 fps: 10
+buffer_count: 4
+poll_timeout_ms: 1000
 queue_depth: 4
 simulate: true
 rtsp_url: rtsp://127.0.0.1:8554/imx6ull
-

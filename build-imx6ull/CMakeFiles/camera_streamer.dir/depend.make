@@ -27,6 +27,7 @@ CMakeFiles/camera_streamer.dir/encode/mjpeg_encoder_stub.cpp.o: ../encode/encode
 CMakeFiles/camera_streamer.dir/encode/mjpeg_encoder_stub.cpp.o: ../encode/mjpeg_encoder_stub.cpp
 
 CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o: ../capture/frame.hpp
+CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o: ../capture/v4l2_device.hpp
 CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o: ../common/bounded_queue.hpp
 CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o: ../common/logger.hpp
 CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o: ../common/time_utils.hpp

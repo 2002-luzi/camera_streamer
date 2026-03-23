@@ -7,10 +7,13 @@
 namespace camera_streamer {
 
 struct CaptureConfig {
-    std::string device{"/dev/video0"};
+    std::string device{"/dev/video1"};
     std::uint32_t width{640};
     std::uint32_t height{480};
+    std::string pixel_format{"YUYV"};
     std::uint32_t fps{10};
+    std::uint32_t buffer_count{4};
+    std::uint32_t poll_timeout_ms{1000};
     bool simulate{true};
 };
 
@@ -21,4 +24,3 @@ struct PipelineConfig {
 };
 
 }  // namespace camera_streamer
-

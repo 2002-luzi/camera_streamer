@@ -85,6 +85,12 @@ Apply a capture format and print what the driver accepted:
 ./build/camera_streamer --set-format /dev/video0 640 480 YUYV
 ```
 
+Request V4L2 mmap buffers and print the `REQBUFS + QUERYBUF` result:
+
+```bash
+./build/camera_streamer --request-buffers /dev/video0 4
+```
+
 Run the threaded skeleton in simulation mode:
 
 ```bash
@@ -97,10 +103,11 @@ Stop it with `Ctrl+C`.
 
 1. use `--probe /dev/video0` to confirm format support
 2. use `--set-format /dev/video0 640 480 YUYV` to confirm `S_FMT/G_FMT`
-3. implement real capture in `CaptureWorker`
-4. keep queue sizes small and observe backpressure behavior
-5. add `MJPEG` encoding first
-6. push `RTSP` to a PC-side `MediaMTX`
+3. use `--request-buffers /dev/video0 4` to confirm `REQBUFS + QUERYBUF`
+4. implement real capture in `CaptureWorker`
+5. keep queue sizes small and observe backpressure behavior
+6. add `MJPEG` encoding first
+7. push `RTSP` to a PC-side `MediaMTX`
 
 ## Cross Toolchain Notes
 

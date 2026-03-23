@@ -28,6 +28,7 @@ CMakeFiles/camera_streamer.dir/encode/mjpeg_encoder_stub.cpp.o
  /home/luzi/linux_dirver/camera_streamer/encode/mjpeg_encoder_stub.cpp
 CMakeFiles/camera_streamer.dir/pipeline/capture_worker.cpp.o
  ../capture/frame.hpp
+ ../capture/v4l2_device.hpp
  ../common/bounded_queue.hpp
  ../common/logger.hpp
  ../common/time_utils.hpp
