@@ -1,3 +1,0 @@
-/home/luzi/linux_dirver/camera_streamer/build-imx6ull/CMakeFiles/rebuild_cache.dir
-/home/luzi/linux_dirver/camera_streamer/build-imx6ull/CMakeFiles/edit_cache.dir
-/home/luzi/linux_dirver/camera_streamer/build-imx6ull/CMakeFiles/camera_streamer.dir
