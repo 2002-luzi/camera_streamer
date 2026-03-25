@@ -107,6 +107,7 @@ void CaptureWorker::RunRealLoop() {
         return;
     }
 
+    // VIDIOC_QUERYCAP 检查驱动能力
     v4l2_capability capability{};
     if (!device.QueryCapabilities(capability)) {
         Log(LogLevel::kError, "Failed to query V4L2 capabilities in real capture mode");
@@ -131,16 +132,19 @@ void CaptureWorker::RunRealLoop() {
         return;
     }
 
+    // VIDIOC_S_FMT 协商设置视频格式
     CaptureFormat applied_format{};
     if (!device.SetCaptureFormat(config_.width, config_.height, pixel_format, applied_format)) {
         return;
     }
 
+    // VIDIOC_S_PARM 协商视频帧率
     CaptureFrameRate applied_rate{};
     if (!device.SetFrameRate(config_.fps, applied_rate)) {
         return;
     }
 
+    // VIDIOC_REQBUFS 向驱动申请 buffer，而后用 VIDIOC_QUERYBUF 获取 buffer 的 mmap 信息
     std::vector<MmapBufferInfo> buffer_infos;
     if (!device.RequestMmapBuffers(config_.buffer_count, buffer_infos)) {
         return;
@@ -149,6 +153,7 @@ void CaptureWorker::RunRealLoop() {
     std::vector<MappedRegion> mapped_regions(buffer_infos.size());
     bool stream_on = false;
 
+    // lambda 表达式定义的一个收尾函数，方便后续调用。用于关闭 streaming，unmap，释放 buffer
     auto cleanup = [&]() {
         if (stream_on) {
             // STREAMOFF 会让驱动停止采集，并把队列状态从 streaming 拉回 idle。
@@ -199,7 +204,7 @@ void CaptureWorker::RunRealLoop() {
         mapped_regions[i].length = info.length;
     }
 
-    // 在 STREAMON 之前，需要先把所有空 buffer 通过 QBUF 交还给驱动。
+    // 在 STREAMON 之前，需要先把所有空 buffer 通过 VIDIOC_QBUF 交还给驱动。
     // 驱动拿到这些 buffer 后，才能开始 DMA / CSI 填帧。
     for (const auto& info : buffer_infos) {
         v4l2_buffer buffer{};
@@ -217,6 +222,7 @@ void CaptureWorker::RunRealLoop() {
         }
     }
 
+    // VIDIOC_STREAMON，开始 stream
     v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (RetryIoctl(device.fd(), VIDIOC_STREAMON, &type) != 0) {
         std::ostringstream oss;
@@ -244,16 +250,17 @@ void CaptureWorker::RunRealLoop() {
 
     while (running_) {
         pollfd descriptor{};
-        descriptor.fd = device.fd();
-        descriptor.events = POLLIN | POLLPRI;
+        descriptor.fd = device.fd();          // 指定要监听的文件描述符
+        descriptor.events = POLLIN | POLLPRI; // POLLIN - 普通可读事件，代表有数据可读，对于 V4L2 意味着有采集完成的 buffer
+                                              // POLLPRI - 高优先级事件 / 异常优先数据,有时 V4L2 驱动可能会通过它通知特殊事件
 
         const int poll_rc = poll(&descriptor, 1, static_cast<int>(config_.poll_timeout_ms));
-        if (poll_rc == 0) {
+        if (poll_rc == 0) { // 返回 0 表示，在超时时间内，没有任何关心的事件发生
             // poll 超时并不一定是错误；在第一阶段里更适合直接继续等待。
             continue;
         }
-        if (poll_rc < 0) {
-            if (errno == EINTR) {
+        if (poll_rc < 0) {  // 小于 0 表示 poll() 调用失败
+            if (errno == EINTR) { // EINTR 代表阻塞等待期间，收到了另一个信号，poll() 被打断提前返回
                 continue;
             }
             std::ostringstream oss;

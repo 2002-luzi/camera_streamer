@@ -31,13 +31,18 @@ if(CMAKE_SYSROOT)
     list(PREPEND CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}")
 endif()
 
+# 查找可执行程序时，不要只在 CMAKE_FIND_ROOT_PATH 中找。
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+# 只在 root path 里找库/头文件/包
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
+# 设置环境变量 PKG_CONFIG_DIR 为空。避免宿主环境中的 
+# pkg-config 默认搜索路径干扰交叉编译。
 set(ENV{PKG_CONFIG_DIR} "")
 if(CMAKE_SYSROOT)
+    # 如果有 sysroot，配置 pkg-config 的 sysroot 和搜索路径
     set(ENV{PKG_CONFIG_SYSROOT_DIR} "${CMAKE_SYSROOT}")
     set(ENV{PKG_CONFIG_LIBDIR}
         "${CMAKE_SYSROOT}/lib/pkgconfig:${CMAKE_SYSROOT}/share/pkgconfig:/usr/lib/${TOOLCHAIN_PREFIX}/pkgconfig"
@@ -47,7 +52,8 @@ else()
     set(ENV{PKG_CONFIG_LIBDIR} "/usr/lib/${TOOLCHAIN_PREFIX}/pkgconfig")
 endif()
 
-set(IMX6ULL_COMMON_FLAGS "-march=armv7-a -mfpu=neon -mfloat-abi=hard")
+# -mfloat-abi=hard 指定使用硬浮点 ABI; -mfpu=VFPv4 启用浮点计算单元
+set(IMX6ULL_COMMON_FLAGS "-march=armv7-a -mfpu=VFPv4 -mfloat-abi=hard")
 set(CMAKE_C_FLAGS_INIT "${IMX6ULL_COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS_INIT "${IMX6ULL_COMMON_FLAGS}")
 

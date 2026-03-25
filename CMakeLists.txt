@@ -24,6 +24,7 @@ target_include_directories(camera_streamer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# -Wall 开启常见警告; -Wextra 开启更多额外警告; -Wpedantic 开启严格标准检查（ISO C/C++）
 target_compile_options(camera_streamer PRIVATE
     -Wall
     -Wextra
